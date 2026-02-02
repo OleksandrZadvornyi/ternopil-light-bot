@@ -5,7 +5,7 @@ const CONFIG = {
   group: '5.2',
 };
 
-async function getSchedule() {
+export async function getSchedule() {
   const addressHash = `${CONFIG.cityId}${CONFIG.streetId}${CONFIG.house}`;
   const today = new Date();
 
@@ -99,5 +99,3 @@ function parseSchedule(times) {
 
   return scheduleLines.join('\n');
 }
-
-export default { getSchedule };
