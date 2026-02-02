@@ -65,7 +65,7 @@ bot.onText(/\/start/, async (msg) => {
 // 2. /check - Manual trigger
 bot.onText(/\/check/, async (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, '🔍 Checking live data...');
+  bot.sendMessage(chatId, '🔍 Перевіряю актуальні дані... ');
   await sendScheduleToUser(chatId);
 });
 
