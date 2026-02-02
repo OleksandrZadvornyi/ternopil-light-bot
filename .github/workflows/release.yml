@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write # Required for creating tags and releases
+  issues: write # Required for commenting on released issues
+  pull-requests: write # Required for commenting on released PRs
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Verify the integrity of provenance attestations and package files in npm
+        run: npm audit signatures
+
+      # (Optional) Add your build/test steps here
+      # - name: Run Tests
+      #   run: npm test
+
+      - name: Run Semantic Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
