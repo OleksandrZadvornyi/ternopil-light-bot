@@ -1,3 +1,15 @@
+# [1.1.0](https://github.com/OleksandrZadvornyi/ternopil-light-bot/compare/v1.0.0...v1.1.0) (2026-02-02)
+
+
+### Bug Fixes
+
+* update /check command message to Ukrainian ([b1765a6](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/b1765a6cb918f11e1a2afb3c5fff20e5f772e4a9))
+
+
+### Features
+
+* switch persistence to MongoDB and add Express server ([bc92f06](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/bc92f06b97dee0e13722a9f41dc6b76f182bd950))
+
 # 1.0.0 (2026-02-02)
 
 
