@@ -47,9 +47,27 @@ app.listen(PORT, () => {
 
 // --- COMMAND HANDLERS ---
 
-// 1. /start - Subscribe User
+// 0. Set the Menu Button (Runs on startup)
+bot.setMyCommands([
+  { command: '/start', description: 'Підписатися та перезапустити' },
+  { command: '/check', description: 'Перевірити статус вручну' },
+]);
+
+// 1. /start - Subscribe User & Show Keyboard
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
+
+  // Define the custom keyboard
+  const options = {
+    parse_mode: 'Markdown',
+    reply_markup: {
+      keyboard: [
+        [{ text: '🔄 Перевірити графік' }], // The button user will press
+      ],
+      resize_keyboard: true, // Make buttons smaller/nicer
+      is_persistent: true, // Keep keyboard visible
+    },
+  };
 
   try {
     // Try to add user to DB. If they exist, this does nothing (idempotent)
@@ -74,10 +92,14 @@ bot.onText(/\/start/, async (msg) => {
   }
 });
 
-// 2. /check - Manual trigger
-bot.onText(/\/check/, async (msg) => {
+// 2. Handle Button Press OR /check command
+// This Regex matches either the command "/check" OR the button text "🔄 Перевірити графік"
+bot.onText(/\/check|🔄 Перевірити графік/, async (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, '🔍 Перевірка актуальних даних...');
+
+  // Feedback to let user know it's working
+  bot.sendChatAction(chatId, 'typing');
+
   await sendScheduleToUser(chatId);
 });
 
@@ -85,6 +107,15 @@ bot.onText(/\/check/, async (msg) => {
 async function sendScheduleToUser(chatId) {
   const schedule = await getSchedule();
   const date = new Date().toLocaleDateString('uk-UA');
+
+  // We repeat the keyboard options here to ensure it doesn't disappear
+  const options = {
+    parse_mode: 'Markdown',
+    reply_markup: {
+      keyboard: [[{ text: '🔄 Перевірити графік' }]],
+      resize_keyboard: true,
+    },
+  };
 
   if (schedule) {
     bot.sendMessage(chatId, `📅 **Графік на ${date}:**\n\n${schedule}`, {
@@ -119,7 +150,7 @@ const checkSchedule = async () => {
     lastSchedule = currentSchedule;
 
     const date = new Date().toLocaleDateString('uk-UA');
-    const message = `🔔 **Update for ${date}:**\n\nThe schedule has changed:\n\n${currentSchedule}`;
+    const message = `🔔 **Оновлення на ${date}:**\n\nГрафік змінився:\n\n${currentSchedule}`;
 
     // Fetch all users from MongoDB
     const subscribers = await Subscriber.find({});
