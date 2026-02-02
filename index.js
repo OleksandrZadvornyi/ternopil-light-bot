@@ -1,71 +1,83 @@
 import dotenv from 'dotenv';
 import TelegramBot from 'node-telegram-bot-api';
-import fs from 'fs';
+import mongoose from 'mongoose';
+import express from 'express';
 import { getSchedule } from './api.js';
 
 dotenv.config();
 
+// --- CONFIGURATION ---
 const token = process.env.TELEGRAM_BOT_TOKEN;
-if (!token) {
-  console.error('❌ Error: TELEGRAM_BOT_TOKEN is missing in .env file.');
+const mongoUri = process.env.MONGODB_URI;
+
+if (!token || !mongoUri) {
+  console.error('❌ Error: Missing TELEGRAM_BOT_TOKEN or MONGODB_URI in .env');
   process.exit(1);
 }
 
+// --- DATABASE SETUP ---
+mongoose
+  .connect(mongoUri)
+  .then(() => console.log('🍃 Connected to MongoDB'))
+  .catch((err) => console.error('❌ MongoDB Connection Error:', err));
+
+// Define the Schema (Table structure)
+const subscriberSchema = new mongoose.Schema({
+  chatId: { type: Number, required: true, unique: true },
+  joinedAt: { type: Date, default: Date.now },
+});
+
+const Subscriber = mongoose.model('Subscriber', subscriberSchema);
+
+// --- BOT SETUP ---
 const bot = new TelegramBot(token, { polling: true });
-
-// --- PERSISTENCE SETUP ---
-const DATA_FILE = 'subscribers.json';
-let subscribers = new Set();
-
-// Load subscribers from file on startup
-if (fs.existsSync(DATA_FILE)) {
-  try {
-    const data = fs.readFileSync(DATA_FILE, 'utf8');
-    subscribers = new Set(JSON.parse(data));
-    console.log(`📂 Loaded ${subscribers.size} subscribers from file.`);
-  } catch (err) {
-    console.error('⚠️ Error loading subscribers file:', err);
-  }
-}
-
-// Helper: Save current subscribers to file
-const saveSubscribers = () => {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify([...subscribers]));
-  } catch (err) {
-    console.error('⚠️ Error saving subscribers:', err);
-  }
-};
-
 let lastSchedule = '';
+
+// --- WEB SERVER (For Render "Keep-Alive") ---
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+  res.send('Bot is running...');
+});
+
+app.listen(PORT, () => {
+  console.log(`🌍 Web server listening on port ${PORT}`);
+});
 
 // --- COMMAND HANDLERS ---
 
-// 1. /start - Subscribe and get initial data
+// 1. /start - Subscribe User
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
 
-  // Add user to subscribers list
-  if (!subscribers.has(chatId)) {
-    subscribers.add(chatId);
-    saveSubscribers();
-    console.log(`➕ New user subscribed: ${chatId}`);
-    bot.sendMessage(
-      chatId,
-      '👋 Привіт! Я буду повідомляти вас про зміни в графіку відключень світла в Тернополі.'
-    );
-  } else {
-    bot.sendMessage(chatId, 'Ви вже підписані. ✅');
-  }
+  try {
+    // Try to add user to DB. If they exist, this does nothing (idempotent)
+    const exists = await Subscriber.findOne({ chatId });
 
-  // Send data immediately
-  await sendScheduleToUser(chatId);
+    if (!exists) {
+      await Subscriber.create({ chatId });
+      console.log(`➕ New user subscribed: ${chatId}`);
+      bot.sendMessage(
+        chatId,
+        '👋 Привіт! Я буду повідомляти вас про зміни в графіку відключень світла в Тернополі.'
+      );
+    } else {
+      bot.sendMessage(chatId, 'Ви вже підписані. ✅');
+    }
+
+    // Send data immediately
+    await sendScheduleToUser(chatId);
+  } catch (error) {
+    console.error('Database Error:', error);
+    bot.sendMessage(chatId, '⚠️ Внутрішня помилка. Спробуйте ще раз.');
+  }
 });
 
 // 2. /check - Manual trigger
 bot.onText(/\/check/, async (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, '🔍 Перевіряю актуальні дані... ');
+  bot.sendMessage(chatId, '🔍 Перевірка актуальних даних...');
   await sendScheduleToUser(chatId);
 });
 
@@ -92,14 +104,12 @@ const checkSchedule = async () => {
   console.log(`⏰ Checking schedule at ${new Date().toLocaleTimeString()}...`);
 
   const currentSchedule = await getSchedule();
-
-  // If API failed, stop here
   if (!currentSchedule) return;
 
-  // INITIALIZATION: If this is the first run, just save the state, don't spam.
+  // Initialization check
   if (lastSchedule === '') {
     lastSchedule = currentSchedule;
-    console.log('✅ Initial schedule saved.');
+    console.log('✅ Initial schedule saved (no broadcast).');
     return;
   }
 
@@ -109,18 +119,21 @@ const checkSchedule = async () => {
     lastSchedule = currentSchedule;
 
     const date = new Date().toLocaleDateString('uk-UA');
-    const message = `🔔 **Оновлення на ${date}:**\n\nГрафік змінився:\n\n${currentSchedule}`;
+    const message = `🔔 **Update for ${date}:**\n\nThe schedule has changed:\n\n${currentSchedule}`;
 
-    for (const chatId of subscribers) {
+    // Fetch all users from MongoDB
+    const subscribers = await Subscriber.find({});
+
+    for (const sub of subscribers) {
       try {
-        await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+        await bot.sendMessage(sub.chatId, message, { parse_mode: 'Markdown' });
       } catch (error) {
+        // Handle blocked users
         if (error.response && error.response.statusCode === 403) {
-          console.log(`❌ User ${chatId} blocked bot. Removing.`);
-          subscribers.delete(chatId);
-          saveSubscribers(); // Update file
+          console.log(`❌ User ${sub.chatId} blocked bot. Removing from DB.`);
+          await Subscriber.deleteOne({ chatId: sub.chatId });
         } else {
-          console.error(`Failed to send to ${chatId}:`, error.message);
+          console.error(`Failed to send to ${sub.chatId}:`, error.message);
         }
       }
     }
@@ -129,8 +142,8 @@ const checkSchedule = async () => {
   }
 };
 
-// Schedule every 15 minutes (15 * 60 * 1000 ms)
+// Start the polling loop (15 minutes)
 checkSchedule();
-setInterval(checkSchedule, 15 * 60 * 1000); // 15 Minutes
+setInterval(checkSchedule, 15 * 60 * 1000);
 
-console.log('🤖 Bot is running...');
+console.log('🤖 Bot is running with MongoDB...');
