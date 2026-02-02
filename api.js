@@ -94,7 +94,7 @@ function parseSchedule(times) {
   }
 
   if (scheduleLines.length === 0) {
-    return '✅ Power is ON all day (or schedule is empty).';
+    return '✅ Світло увімкнено весь день (графік порожній).';
   }
 
   return scheduleLines.join('\n');
