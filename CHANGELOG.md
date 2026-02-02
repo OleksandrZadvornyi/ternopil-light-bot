@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/OleksandrZadvornyi/ternopil-light-bot/compare/v1.1.0...v1.2.0) (2026-02-02)
+
+
+### Features
+
+* add custom keyboard and improve command handling ([4be3a70](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/4be3a701800382c516e44477a512b32830ed1812))
+
 # [1.1.0](https://github.com/OleksandrZadvornyi/ternopil-light-bot/compare/v1.0.0...v1.1.0) (2026-02-02)
 
 
