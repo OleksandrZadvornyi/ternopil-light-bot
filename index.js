@@ -1,10 +1,10 @@
 import dotenv from 'dotenv';
 import TelegramBot from 'node-telegram-bot-api';
+import fs from 'fs';
 import { getSchedule } from './api.js';
 
 dotenv.config();
 
-// 1. Initialize Bot
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) {
   console.error('❌ Error: TELEGRAM_BOT_TOKEN is missing in .env file.');
@@ -13,18 +13,42 @@ if (!token) {
 
 const bot = new TelegramBot(token, { polling: true });
 
-// 2. State Management
-// Using a Set to ensure unique Chat IDs
-const subscribers = new Set();
+// --- PERSISTENCE SETUP ---
+const DATA_FILE = 'subscribers.json';
+let subscribers = new Set();
+
+// Load subscribers from file on startup
+if (fs.existsSync(DATA_FILE)) {
+  try {
+    const data = fs.readFileSync(DATA_FILE, 'utf8');
+    subscribers = new Set(JSON.parse(data));
+    console.log(`📂 Loaded ${subscribers.size} subscribers from file.`);
+  } catch (err) {
+    console.error('⚠️ Error loading subscribers file:', err);
+  }
+}
+
+// Helper: Save current subscribers to file
+const saveSubscribers = () => {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify([...subscribers]));
+  } catch (err) {
+    console.error('⚠️ Error saving subscribers:', err);
+  }
+};
+
 let lastSchedule = '';
 
-// 3. Handle /start command
+// --- COMMAND HANDLERS ---
+
+// 1. /start - Subscribe and get initial data
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
 
   // Add user to subscribers list
   if (!subscribers.has(chatId)) {
     subscribers.add(chatId);
+    saveSubscribers();
     console.log(`➕ New user subscribed: ${chatId}`);
     bot.sendMessage(
       chatId,
@@ -34,23 +58,36 @@ bot.onText(/\/start/, async (msg) => {
     bot.sendMessage(chatId, 'Ви вже підписані. ✅');
   }
 
-  // Send current schedule immediately so they don't have to wait
-  bot.sendChatAction(chatId, 'typing');
+  // Send data immediately
+  await sendScheduleToUser(chatId);
+});
+
+// 2. /check - Manual trigger
+bot.onText(/\/check/, async (msg) => {
+  const chatId = msg.chat.id;
+  bot.sendMessage(chatId, '🔍 Checking live data...');
+  await sendScheduleToUser(chatId);
+});
+
+// Helper: Fetch and send schedule to a specific user
+async function sendScheduleToUser(chatId) {
   const schedule = await getSchedule();
+  const date = new Date().toLocaleDateString('uk-UA');
 
   if (schedule) {
-    bot.sendMessage(chatId, `📅 **Поточний графік:**\n\n${schedule}`, {
+    bot.sendMessage(chatId, `📅 **Графік на ${date}:**\n\n${schedule}`, {
       parse_mode: 'Markdown',
     });
   } else {
     bot.sendMessage(
       chatId,
-      '⚠️ Не вдалося отримати графік прямо зараз. Я продовжуватиму спроби!'
+      '⚠️ Не вдалося отримати графік. Спробуйте пізніше.'
     );
   }
-});
+}
 
-// 4. Polling Function
+// --- POLLING LOOP ---
+
 const checkSchedule = async () => {
   console.log(`⏰ Checking schedule at ${new Date().toLocaleTimeString()}...`);
 
@@ -66,23 +103,22 @@ const checkSchedule = async () => {
     return;
   }
 
-  // DIFFING: Compare new schedule vs old schedule
+  // Diffing check
   if (currentSchedule !== lastSchedule) {
     console.log('🔄 Schedule changed! Broadcasting...');
+    lastSchedule = currentSchedule;
 
-    lastSchedule = currentSchedule; // Update state
-
-    // Broadcast to all subscribers
-    const message = `🔔 **Оновлення! Графік змінився:**\n\n${currentSchedule}`;
+    const date = new Date().toLocaleDateString('uk-UA');
+    const message = `🔔 **Оновлення на ${date}:**\n\nГрафік змінився:\n\n${currentSchedule}`;
 
     for (const chatId of subscribers) {
       try {
         await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
       } catch (error) {
-        // If a user blocked the bot, remove them
         if (error.response && error.response.statusCode === 403) {
           console.log(`❌ User ${chatId} blocked bot. Removing.`);
           subscribers.delete(chatId);
+          saveSubscribers(); // Update file
         } else {
           console.error(`Failed to send to ${chatId}:`, error.message);
         }
@@ -93,12 +129,8 @@ const checkSchedule = async () => {
   }
 };
 
-// 5. Start the Loop
-// Run immediately on startup (optional, currently strictly scheduled)
-checkSchedule();
-
 // Schedule every 15 minutes (15 * 60 * 1000 ms)
-const INTERVAL_MINUTES = 15;
-setInterval(checkSchedule, INTERVAL_MINUTES * 60 * 1000);
+checkSchedule();
+setInterval(checkSchedule, 15 * 60 * 1000); // 15 Minutes
 
 console.log('🤖 Bot is running...');
