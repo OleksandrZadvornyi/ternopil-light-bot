@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/OleksandrZadvornyi/ternopil-light-bot/compare/v1.2.0...v1.2.1) (2026-02-02)
+
+
+### Bug Fixes
+
+* localize "all-day power on" message to Ukrainian ([329c997](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/329c9973e1e4c3dd1123d7395092ad3248bf982e))
+
 # [1.2.0](https://github.com/OleksandrZadvornyi/ternopil-light-bot/compare/v1.1.0...v1.2.0) (2026-02-02)
 
 
