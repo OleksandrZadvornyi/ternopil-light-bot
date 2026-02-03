@@ -1,3 +1,16 @@
+# [1.3.0](https://github.com/OleksandrZadvornyi/ternopil-light-bot/compare/v1.2.1...v1.3.0) (2026-02-03)
+
+
+### Bug Fixes
+
+* use env API_URL and update Referer header ([e732780](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/e7327801e5bf501a95292c11c1cfcfd77288901a))
+* use Kyiv timezone when computing today ([0790e0f](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/0790e0f860be316c51bbbb7516adc2511e8815d8))
+
+
+### Features
+
+* improve API parsing, timezone and notifications ([7524bd0](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/7524bd090e7899c2c6b34fd5e1b28e4494b10194))
+
 ## [1.2.1](https://github.com/OleksandrZadvornyi/ternopil-light-bot/compare/v1.2.0...v1.2.1) (2026-02-02)
 
 
