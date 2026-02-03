@@ -12,14 +12,17 @@ const CONFIG = {
 export async function getSchedule() {
   const addressHash = `${CONFIG.cityId}${CONFIG.streetId}${CONFIG.house}`;
 
-  const now = new Date();
-  const today = new Date(
-    now.toLocaleString('en-US', { timeZone: 'Europe/Kyiv' })
-  );
+  const debugString = `${CONFIG.cityId}/${CONFIG.streetId}/${CONFIG.house}`;
+  const debugKey = Buffer.from(debugString).toString('base64');
 
-  // Set explicit time boundaries
+  const kyivTime = new Date().toLocaleString('en-US', {
+    timeZone: 'Europe/Kyiv',
+  });
+  const today = new Date(kyivTime);
+
   const dateStart = new Date(today);
   dateStart.setHours(0, 0, 0, 0);
+
   const dateEnd = new Date(today);
   dateEnd.setHours(23, 59, 59, 999);
 
@@ -36,51 +39,51 @@ export async function getSchedule() {
     const response = await fetch(url, {
       headers: {
         accept: 'application/ld+json',
-        'x-debug-key': 'MTAzMi8xMTEwMS8xMA==', // Base64 '1032/11101/10'
+        'x-debug-key': debugKey,
         Referer: 'https://poweron.toe.com.ua/',
         'User-Agent': 'Mozilla/5.0',
       },
     });
 
     if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`);
+      throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
     const member = data['hydra:member']?.[0];
 
-    if (!member || !member.dataJson || !member.dataJson[CONFIG.group]) {
-      throw new Error('Invalid API structure or data missing');
+    const times = member?.dataJson?.[CONFIG.group]?.times;
+
+    if (!times) {
+      throw new Error('Invalid API structure or data missing for this group');
     }
 
-    const times = member.dataJson[CONFIG.group].times;
     return parseSchedule(times);
   } catch (error) {
     console.error('Fetch error:', error.message);
-    return null; // Return null to indicate failure
+    return null;
   }
 }
 
-// Helper: Parse the times object into a string
 function parseSchedule(times) {
   const sortedTimes = Object.keys(times).sort();
   let outageStart = null;
   let lastTime = null;
   let scheduleLines = [];
 
-  const add30Min = (timeStr) => {
+  const getEndTime = (timeStr) => {
     const [h, m] = timeStr.split(':').map(Number);
-    const date = new Date();
-    date.setHours(h, m + 30);
-    return date.toLocaleTimeString('uk-UA', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const totalMinutes = h * 60 + m + 30;
+
+    const newH = Math.floor(totalMinutes / 60) % 24;
+    const newM = totalMinutes % 60;
+
+    return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
   };
 
   sortedTimes.forEach((time) => {
     const status = times[time];
-    // 1 = Off, 10 = Possible/Grey. Both treated as OFF.
+    // 1 = Off, 10 = Possible. Both treated as OFF.
     const isOff = status === '1' || status === '10';
 
     if (isOff) {
@@ -88,17 +91,14 @@ function parseSchedule(times) {
       lastTime = time;
     } else {
       if (outageStart) {
-        const endTime = add30Min(lastTime);
-        scheduleLines.push(`🔴 ${outageStart} - ${endTime}`);
+        scheduleLines.push(`🔴 ${outageStart} - ${getEndTime(lastTime)}`);
         outageStart = null;
       }
     }
   });
 
-  // Handle end of day outage
   if (outageStart) {
-    const endTime = add30Min(lastTime);
-    scheduleLines.push(`🔴 ${outageStart} - ${endTime}`);
+    scheduleLines.push(`🔴 ${outageStart} - ${getEndTime(lastTime)}`);
   }
 
   if (scheduleLines.length === 0) {

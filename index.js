@@ -61,16 +61,13 @@ bot.onText(/\/start/, async (msg) => {
   const options = {
     parse_mode: 'Markdown',
     reply_markup: {
-      keyboard: [
-        [{ text: '🔄 Перевірити графік' }], // The button user will press
-      ],
-      resize_keyboard: true, // Make buttons smaller/nicer
-      is_persistent: true, // Keep keyboard visible
+      keyboard: [[{ text: '🔄 Перевірити графік' }]],
+      resize_keyboard: true,
+      is_persistent: true,
     },
   };
 
   try {
-    // Try to add user to DB. If they exist, this does nothing (idempotent)
     const exists = await Subscriber.findOne({ chatId });
 
     if (!exists) {
@@ -81,7 +78,7 @@ bot.onText(/\/start/, async (msg) => {
         '👋 Привіт! Я буду повідомляти вас про зміни в графіку відключень світла в Тернополі.'
       );
     } else {
-      bot.sendMessage(chatId, 'Ви вже підписані. ✅');
+      bot.sendMessage(chatId, 'Ви вже підписані. ✅', options);
     }
 
     // Send data immediately
@@ -118,58 +115,75 @@ async function sendScheduleToUser(chatId) {
   };
 
   if (schedule) {
-    bot.sendMessage(chatId, `📅 **Графік на ${date}:**\n\n${schedule}`, {
-      parse_mode: 'Markdown',
-    });
+    bot.sendMessage(
+      chatId,
+      `📅 **Графік на ${date}:**\n\n${schedule}`,
+      options
+    );
   } else {
     bot.sendMessage(
       chatId,
-      '⚠️ Не вдалося отримати графік. Спробуйте пізніше.'
+      '⚠️ Не вдалося отримати графік. Спробуйте пізніше.',
+      options
     );
   }
 }
 
 // --- POLLING LOOP ---
+const adminChatId = process.env.ADMIN_CHAT_ID;
 
 const checkSchedule = async () => {
-  console.log(`⏰ Checking schedule at ${new Date().toLocaleTimeString()}...`);
+  try {
+    const currentSchedule = await getSchedule();
+    if (!currentSchedule) {
+      console.error('❌ API Fetch failed.');
+      if (adminChatId) {
+        bot.sendMessage(
+          adminChatId,
+          '⚠️ **ALERT:** The Bot cannot fetch data! The API URL might have changed.'
+        );
+      }
+      return;
+    }
 
-  const currentSchedule = await getSchedule();
-  if (!currentSchedule) return;
+    // Initialization check
+    if (lastSchedule === '') {
+      lastSchedule = currentSchedule;
+      console.log('✅ Initial schedule saved (no broadcast).');
+      return;
+    }
 
-  // Initialization check
-  if (lastSchedule === '') {
-    lastSchedule = currentSchedule;
-    console.log('✅ Initial schedule saved (no broadcast).');
-    return;
-  }
+    // Diffing check
+    if (currentSchedule !== lastSchedule) {
+      console.log('🔄 Schedule changed! Broadcasting...');
+      lastSchedule = currentSchedule;
 
-  // Diffing check
-  if (currentSchedule !== lastSchedule) {
-    console.log('🔄 Schedule changed! Broadcasting...');
-    lastSchedule = currentSchedule;
+      const date = new Date().toLocaleDateString('uk-UA');
+      const message = `🔔 **Оновлення на ${date}:**\n\nГрафік змінився:\n\n${currentSchedule}`;
 
-    const date = new Date().toLocaleDateString('uk-UA');
-    const message = `🔔 **Оновлення на ${date}:**\n\nГрафік змінився:\n\n${currentSchedule}`;
+      // Fetch all users from MongoDB
+      const subscribers = await Subscriber.find({});
 
-    // Fetch all users from MongoDB
-    const subscribers = await Subscriber.find({});
-
-    for (const sub of subscribers) {
-      try {
-        await bot.sendMessage(sub.chatId, message, { parse_mode: 'Markdown' });
-      } catch (error) {
-        // Handle blocked users
-        if (error.response && error.response.statusCode === 403) {
-          console.log(`❌ User ${sub.chatId} blocked bot. Removing from DB.`);
-          await Subscriber.deleteOne({ chatId: sub.chatId });
-        } else {
-          console.error(`Failed to send to ${sub.chatId}:`, error.message);
+      for (const sub of subscribers) {
+        try {
+          await bot.sendMessage(sub.chatId, message, {
+            parse_mode: 'Markdown',
+          });
+        } catch (error) {
+          // Handle blocked users
+          if (error.response && error.response.statusCode === 403) {
+            console.log(`❌ User ${sub.chatId} blocked bot. Removing from DB.`);
+            await Subscriber.deleteOne({ chatId: sub.chatId });
+          } else {
+            console.error(`Failed to send to ${sub.chatId}:`, error.message);
+          }
         }
       }
+    } else {
+      console.log('No changes detected.');
     }
-  } else {
-    console.log('No changes detected.');
+  } catch (e) {
+    console.error('Critical Loop Error:', e);
   }
 };
 
@@ -177,4 +191,4 @@ const checkSchedule = async () => {
 checkSchedule();
 setInterval(checkSchedule, 15 * 60 * 1000);
 
-console.log('🤖 Bot is running with MongoDB...');
+console.log('🤖 Bot is running...');
