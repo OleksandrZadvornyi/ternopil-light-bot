@@ -1,3 +1,7 @@
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 const CONFIG = {
   cityId: '1032',
   streetId: '11101',
@@ -22,14 +26,14 @@ export async function getSchedule() {
     time: addressHash,
   });
 
-  const url = `https://api-toe-poweron.inneti.net/api/a_gpv_g?${params.toString()}`;
+  const url = `${process.env.API_URL}?${params.toString()}`;
 
   try {
     const response = await fetch(url, {
       headers: {
         accept: 'application/ld+json',
         'x-debug-key': 'MTAzMi8xMTEwMS8xMA==', // Base64 '1032/11101/10'
-        Referer: 'https://toe-poweron.inneti.net/',
+        Referer: 'https://poweron.toe.com.ua/',
         'User-Agent': 'Mozilla/5.0',
       },
     });
