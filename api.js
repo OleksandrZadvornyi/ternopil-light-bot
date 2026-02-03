@@ -11,7 +11,11 @@ const CONFIG = {
 
 export async function getSchedule() {
   const addressHash = `${CONFIG.cityId}${CONFIG.streetId}${CONFIG.house}`;
-  const today = new Date();
+
+  const now = new Date();
+  const today = new Date(
+    now.toLocaleString('en-US', { timeZone: 'Europe/Kyiv' })
+  );
 
   // Set explicit time boundaries
   const dateStart = new Date(today);
