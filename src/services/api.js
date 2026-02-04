@@ -16,6 +16,9 @@ export async function getSchedule() {
   try {
     const { url, headers } = buildRequestConfig();
 
+    console.log('🔍 Debug URL:', url);
+    console.log('🔍 Debug Headers:', JSON.stringify(headers));
+
     const response = await fetch(url, { headers });
 
     if (!response.ok) {
