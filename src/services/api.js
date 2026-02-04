@@ -4,10 +4,10 @@ import { parseSchedule } from '../utils/parser.js';
 dotenv.config();
 
 const CONFIG = {
-  cityId: '1032',
-  streetId: '11101',
-  house: '10',
-  group: '5.2',
+  cityId: process.env.CITY_ID,
+  streetId: process.env.STREET_ID,
+  house: process.env.HOUSE_ID,
+  group: process.env.GROUP,
   apiUrl: process.env.API_URL,
 };
 
