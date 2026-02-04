@@ -1,3 +1,16 @@
+# [1.5.0](https://github.com/OleksandrZadvornyi/ternopil-light-bot/compare/v1.4.0...v1.5.0) (2026-02-04)
+
+
+### Bug Fixes
+
+* adjust API time params and query encoding ([cb536a5](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/cb536a54a9d8d50ec1410fafb8c7ceec18ebadcc))
+* use detailed User-Agent in API requests ([f3ace08](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/f3ace0865449737738d90bdbb79a20d76ea061fa))
+
+
+### Features
+
+* admins can force fresh schedule fetch ([d40eb70](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/d40eb708037875713477149c434703aa5fd878dd))
+
 # [1.4.0](https://github.com/OleksandrZadvornyi/ternopil-light-bot/compare/v1.3.0...v1.4.0) (2026-02-04)
 
 

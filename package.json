@@ -1,6 +1,6 @@
 {
   "name": "ternopil-light-bot",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "description": "A Telegram bot for Ternopil light schedule",
   "main": "src/index.js",
