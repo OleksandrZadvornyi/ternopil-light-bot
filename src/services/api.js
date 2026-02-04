@@ -46,19 +46,31 @@ function buildRequestConfig() {
   // Explicitly define "Now" in Kyiv timezone
   const todayKyiv = DateTime.now().setZone('Europe/Kyiv');
 
-  // Get start/end of the day in Kyiv, then convert to UTC ISO strings for the API
-  const dateStart = todayKyiv.startOf('day');
-  const dateEnd = todayKyiv.endOf('day');
+  const dateAfter = todayKyiv
+    .minus({ days: 1 })
+    .set({ hour: 12, minute: 0, second: 0, millisecond: 0 });
 
+  const dateBefore = todayKyiv.plus({ days: 1 }).startOf('day');
+
+  const toApiTime = (dt) =>
+    dt.toUTC().toFormat("yyyy-MM-dd'T'HH:mm:ss'+00:00'");
+
+  // Build Query String Manually to preserve 'group[]'
   const params = new URLSearchParams({
-    before: dateEnd.toJSDate().toISOString(),
-    after: dateStart.toJSDate().toISOString(),
+    before: toApiTime(dateBefore),
+    after: toApiTime(dateAfter),
     'group[]': CONFIG.group,
     time: addressHash,
   });
 
+  // Decode the brackets back to []
+  const queryString = params
+    .toString()
+    .replace(/%5B/g, '[')
+    .replace(/%5D/g, ']');
+
   return {
-    url: `${CONFIG.apiUrl}?${params}`,
+    url: `${CONFIG.apiUrl}?${queryString}`,
     headers: {
       accept: 'application/ld+json',
       'x-debug-key': debugKey,
