@@ -1,11 +1,23 @@
 import { bot } from './instance.js';
 import { Subscriber } from '../models/Subscriber.js';
+import { Schedule } from '../models/Schedule.js';
 import { getSchedule } from '../services/api.js';
 
 export async function sendScheduleToUser(chatId) {
-  const schedule = await getSchedule();
-  const date = new Date().toLocaleDateString('uk-UA');
+  // Try to get from Cache (DB) first
+  let scheduleDoc = await Schedule.findOne();
+  let scheduleContent = scheduleDoc ? scheduleDoc.content : null;
 
+  // If DB is empty, fetch fresh data and save it
+  if (!scheduleContent) {
+    console.log('⚠️ Cache miss. Fetching from API...');
+    scheduleContent = await getSchedule();
+    if (scheduleContent) {
+      await Schedule.create({ content: scheduleContent });
+    }
+  }
+
+  const date = new Date().toLocaleDateString('uk-UA');
   const options = {
     parse_mode: 'Markdown',
     reply_markup: {
@@ -14,10 +26,10 @@ export async function sendScheduleToUser(chatId) {
     },
   };
 
-  if (schedule) {
+  if (scheduleContent) {
     await bot.sendMessage(
       chatId,
-      `📅 **Графік на ${date}:**\n\n${schedule}`,
+      `📅 **Графік на ${date}:**\n\n${scheduleContent}`,
       options
     );
   } else {
@@ -48,9 +60,9 @@ export function initHandlers() {
 
   // Command: /check
   bot.onText(/\/check|🔄 Перевірити графік/, async (msg) => {
-    bot.sendChatAction(msg.chat.id, 'typing');
+    // Just send the cached data. No API calls here.
     await sendScheduleToUser(msg.chat.id);
   });
 
-  console.log('✅ Bot handlers loaded.');
+  console.log('🤖 Bot handlers loaded.');
 }
