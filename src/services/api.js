@@ -63,7 +63,8 @@ function buildRequestConfig() {
       accept: 'application/ld+json',
       'x-debug-key': debugKey,
       Referer: 'https://poweron.toe.com.ua/',
-      'User-Agent': 'Mozilla/5.0',
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0',
     },
   };
 }
