@@ -25,11 +25,12 @@ export const checkSchedule = async () => {
       dbEntry.lastUpdated = new Date();
       await dbEntry.save();
 
-      const date = DateTime.now()
-        .setZone('Europe/Kyiv')
-        .setLocale('uk')
-        .toFormat('dd.MM.yyyy');
-      const message = `🔔 **Оновлення на ${date}:**\n\nГрафік змінився:\n\n${currentSchedule}`;
+      // Get current time for the broadcast message
+      const now = DateTime.now().setZone('Europe/Kyiv').setLocale('uk');
+      const date = now.toFormat('dd.MM.yyyy');
+      const time = now.toFormat('HH:mm');
+
+      const message = `🔔 **Оновлення на ${date}:**\n(Зміни виявлено о ${time})\n\nГрафік змінився:\n\n${currentSchedule}`;
 
       // Broadcast
       const subscribers = await Subscriber.find({});
@@ -45,7 +46,7 @@ export const checkSchedule = async () => {
         }
       }
     } else {
-      // Update timestamp even if content is same, to show we checked
+      // Ensure the timestamp stays fresh for manual /check commands
       dbEntry.lastUpdated = new Date();
       await dbEntry.save();
     }

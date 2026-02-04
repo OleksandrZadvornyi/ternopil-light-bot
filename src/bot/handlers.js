@@ -12,7 +12,7 @@ export async function sendScheduleToUser(chatId) {
     console.log('⚠️ Cache miss. Fetching from API...');
     scheduleContent = await getSchedule();
     if (scheduleContent) {
-      await Schedule.create({ content: scheduleContent });
+      scheduleDoc = await Schedule.create({ content: scheduleContent });
     }
   }
 
@@ -30,9 +30,16 @@ export async function sendScheduleToUser(chatId) {
   };
 
   if (scheduleContent) {
+    // Format the database timestamp
+    const lastCheckTime = scheduleDoc?.lastUpdated
+      ? DateTime.fromJSDate(scheduleDoc.lastUpdated)
+          .setZone('Europe/Kyiv')
+          .toFormat('HH:mm')
+      : DateTime.now().setZone('Europe/Kyiv').toFormat('HH:mm');
+
     await bot.sendMessage(
       chatId,
-      `📅 **Графік на ${date}:**\n\n${scheduleContent}`,
+      `📅 **Графік на ${date}:**\n(Оновлено: ${lastCheckTime})\n\n${scheduleContent}`,
       options
     );
   } else {
