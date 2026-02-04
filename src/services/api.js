@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { DateTime } from 'luxon';
 import { parseSchedule } from '../utils/parser.js';
 
 dotenv.config();
@@ -22,7 +23,6 @@ export async function getSchedule() {
     }
 
     const data = await response.json();
-
     const times = data['hydra:member']?.[0]?.dataJson?.[CONFIG.group]?.times;
 
     if (!times) throw new Error('Data missing for this group');
@@ -40,15 +40,16 @@ function buildRequestConfig() {
     `${CONFIG.cityId}/${CONFIG.streetId}/${CONFIG.house}`
   ).toString('base64');
 
-  const today = new Date(
-    new Date().toLocaleString('en-US', { timeZone: 'Europe/Kyiv' })
-  );
-  const dateStart = new Date(today.setHours(0, 0, 0, 0));
-  const dateEnd = new Date(today.setHours(23, 59, 59, 999));
+  // Explicitly define "Now" in Kyiv timezone
+  const todayKyiv = DateTime.now().setZone('Europe/Kyiv');
+
+  // Get start/end of the day in Kyiv, then convert to UTC ISO strings for the API
+  const dateStart = todayKyiv.startOf('day');
+  const dateEnd = todayKyiv.endOf('day');
 
   const params = new URLSearchParams({
-    before: dateEnd.toISOString(),
-    after: dateStart.toISOString(),
+    before: dateEnd.toJSDate().toISOString(),
+    after: dateStart.toJSDate().toISOString(),
     'group[]': CONFIG.group,
     time: addressHash,
   });

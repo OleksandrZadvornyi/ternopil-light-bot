@@ -1,3 +1,5 @@
+import { DateTime } from 'luxon';
+
 /**
  * Takes raw API times and returns a formatted string.
  */
@@ -36,16 +38,11 @@ export function parseSchedule(times) {
   return scheduleLines.join('\n');
 }
 
-// Helper for time math
+// Helper for time math using Luxon
 function add30Minutes(timeStr) {
-  const [h, m] = timeStr.split(':').map(Number);
-  const date = new Date();
-  date.setHours(h, m + 30);
+  // Parse "HH:mm" in Kyiv context
+  const time = DateTime.fromFormat(timeStr, 'HH:mm', { zone: 'Europe/Kyiv' });
 
-  // Format back to HH:MM
-  return date.toLocaleTimeString('uk-UA', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  // Add 30 minutes and format back
+  return time.plus({ minutes: 30 }).toFormat('HH:mm');
 }
