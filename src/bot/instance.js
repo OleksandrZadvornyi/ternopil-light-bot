@@ -11,4 +11,7 @@ export const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
   polling: true,
 });
 
-await bot.setMyCommands([{ command: 'start', description: 'Показати кнопки' }]);
+await bot.setMyCommands([
+  { command: '/start', description: 'Запустити бота' },
+  { command: '/check', description: 'Перевірити графік зараз' },
+]);
