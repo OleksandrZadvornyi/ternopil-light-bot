@@ -1,3 +1,18 @@
+# [1.4.0](https://github.com/OleksandrZadvornyi/ternopil-light-bot/compare/v1.3.0...v1.4.0) (2026-02-04)
+
+
+### Bug Fixes
+
+* read location IDs from environment ([8cb6144](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/8cb614477fd55bf6495d091e19cbb69e04118a98))
+
+
+### Features
+
+* include last-updated time in schedule messages ([61c7213](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/61c7213ee37c08ec543ab05b029d897c182e5c0c))
+* persist schedule in DB and broadcast updates ([c2d6c7a](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/c2d6c7adf74206907ad4e191d7ecd960fc4307e6))
+* update bot commands ([88e56dc](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/88e56dc5589709a14b036adedad06a3fd441f72d))
+* use Luxon for Kyiv timezone handling ([83b07cc](https://github.com/OleksandrZadvornyi/ternopil-light-bot/commit/83b07cc2b4e4493669af64fbd10ddf9c9ad3ad64))
+
 # [1.3.0](https://github.com/OleksandrZadvornyi/ternopil-light-bot/compare/v1.2.1...v1.3.0) (2026-02-03)
 
 
